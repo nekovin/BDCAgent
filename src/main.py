@@ -32,6 +32,17 @@ def load_api_key(file_path):
     except Exception as e:
         print(f"Error loading API key: {e}")
         return None
+    
+def extract_tasks(llm, message):
+    context = "\n\n Please format it like this: '<Task 1>' \n '<Task 2>' \n '<Task 3>', ... without any extra information such as numbers or bullet points.\n\n The availabe tools are CleanData, FindCorrelation"
+    context = context + "If FindCorrelation, please specify the variables to find the correlation between. For example, 'FindCorrelation [var1, var2]'."
+    message = llm.invoke(f"Extract tasks from the following message:\n\n{message}.").content
+    #response = llm(messages=[{"role": "system", "content": context}, {"role": "user", "content": message}]).content
+    response = llm.invoke([{"role": "system", "content": context}, {"role": "user", "content": message}])
+    response = response.content  # Access the content attribute of the response
+
+    tasks = response.splitlines()
+    return tasks
 
 def prompt(llm, message, file_path):
     # define agents, planning agent should dynamically adjust which agentss are needed
@@ -47,26 +58,36 @@ def prompt(llm, message, file_path):
     }
 
     # split the message into tasks, this needs to be improved
-    messages = ["I need to clean the data", "I need to find the correlation between Open and Close", "Interpret"]
+    #messages = ["I need to clean the data", "I need to find the correlation between Open and Close", "Interpret"]
+
+    messages = extract_tasks(llm, message) + ["Interpret"]
+
+    #print(f"Messages: {messages}")
+
+    print("Processing")
 
     for message in messages:
-        print(f"User Message: {message}")
+        #print(f"User Message: {message}")
         message_history, response = planning_agent.send_message(message)
         formatted_response = response.replace("[file_path]", file_path)
         #print(f"Planning Agent Response:\n{formatted_response}\n")
 
         if message == "Interpret":
-            print("Interpretation Agent Response:")
+            #print("Interpretation Agent Response:")
             #print(result)
-            interpretation = agent_calls["Interpret"](result)
-            return interpretation
+            cleaned_data_path = "../cleaned_data/cleaned_data.csv" # this should be dynamic
+            interpretation = agent_calls["Interpret"](cleaned_data_path, result)
+            return "Interpretation: \n\n" + interpretation
 
         if "Action:" in formatted_response:
+
             action = formatted_response.split("Action:")[1].split("\n")[0].strip()
             if action in agent_calls:
                 result = agent_calls[action](formatted_response)
         
-    return result
+        print("")
+        
+    return "Could not interpret: \n\n" + result
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Causal Agent")
@@ -77,7 +98,7 @@ def parse_args():
 
 def main():
 
-    api_key_file = "api_key.txt"  # Path to your API key file
+    api_key_file = "api_key.txt" 
     openai_api_key = load_api_key(api_key_file)
 
     if openai_api_key:

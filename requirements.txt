@@ -1,0 +1,6 @@
+langchain_community
+langchain
+langchain-openai
+pandas
+statsmodels
+numpy

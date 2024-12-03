@@ -57,18 +57,23 @@ class CleaningAgent:
             if not os.path.exists("cleaned_data"):
                 os.mkdir("cleaned_data")
 
+
             # Run all cleaning tools in sequence
             results = []
             #results.append(clean_dates_tool(file_path))
             results.append(clean_dates_tool.invoke(file_path))
 
+            #print("Pre cleaning results:", results)
+
             # after first cleaning
-            file_path = r"cleanleaned_data/cleaned_data.csv"
+            file_path = r"cleaned_data/cleaned_data.csv"
             #results.append(remove_nulls_tool(file_path))
             results.append(remove_nulls_tool.invoke(file_path))
             #results.append(fix_dtypes_tool(file_path))
             results.append(fix_dtypes_tool.invoke(file_path))
-            
+
+            #print("Post cleaning results:", results)
+
             return "\n".join(results)
             
         except Exception as e:

@@ -69,6 +69,8 @@ class CausationAgent:
         
     def analyze_causation(self, formatted_instruction: str):
         try:
+            #print("")
+            #print("Analyzing causation")
             # Extract file path and variables from instruction
             params = formatted_instruction.split("Action Input:")[1].strip()
             
@@ -79,6 +81,7 @@ class CausationAgent:
             ##results.append(granger_causality_tool(params))
             results.append(granger_causality_tool.invoke(params))
 
+            #print("Causation results:", results)
             
             return "\n".join(results)
             
