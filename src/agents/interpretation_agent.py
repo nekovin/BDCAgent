@@ -28,7 +28,7 @@ class InterpretationAgent:
         self.confidence_threshold = confidence_threshold
         self.interpretation_history = []
     
-    def interpret_results(self, cleaned_data_path, prompt: str) -> str:
+    def interpret_results(self, data : pd.DataFrame, prompt: str) -> str:
         """
         Get raw interpretation from the agent.
         
@@ -39,7 +39,6 @@ class InterpretationAgent:
             Raw interpretation response
         """
         try:
-            data = pd.read_csv(cleaned_data_path)
 
             # Prepare formatted input
             formatted_input = f"Data:\n{data.head().to_string(index=False)}\n\nPrompt:\n{prompt}"
