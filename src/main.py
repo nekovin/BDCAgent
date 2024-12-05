@@ -1,9 +1,11 @@
 import argparse
 from utils.utils import get_api
+from utils.saving_memory import MessageHistoryStorage
 #from managers.prompt_agents import prompt
 from langchain_openai import ChatOpenAI
 from managers.agent_manager import *
 import pandas as pd
+from langchain.memory import FileChatMessageHistory
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Causal Agent")
@@ -12,7 +14,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def setup(args):
+def setup(args, chat_history):
     api_key = get_api()
 
     if api_key:
@@ -28,7 +30,7 @@ def setup(args):
     print(f"File Path: {file_path}")
     print(f"Message: {message}")
 
-    orchestrator = Orchestrator(llm)
+    orchestrator = Orchestrator(llm, chat_history)
 
     df = load_data(file_path)  
 
@@ -41,9 +43,11 @@ def load_data(file_path):
 def main():
     args = parse_args()
 
-    message, orchestrator, df = setup(args)
+    chat_history = FileChatMessageHistory("chat_history.json")
 
-    result = orchestrator.process(message, df)
+    message, orchestrator, df = setup(args, chat_history)
+
+    result, message_history = orchestrator.process(message, df)
 
     print(result)
 
