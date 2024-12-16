@@ -4,78 +4,73 @@ import pandas as pd
 import os
 from langchain.tools import tool
 
+
+
 @tool
-def clean_dates_tool(file_path: str) -> str:
+def clean_dates_tool(data: Dict) -> Dict:
     """Converts date columns to datetime format"""
-    try:
-        df = pd.read_csv(file_path)
-        date_columns = df.columns[df.columns.str.contains('date', case=False)]
-        for col in date_columns:
-            df[col] = pd.to_datetime(df[col], errors='coerce')
-        df.to_csv("cleaned_data/cleaned_data.csv", index=False)
-        return f"Dates cleaned in columns: {list(date_columns)}"
-    except Exception as e:
-        return f"Error cleaning dates: {str(e)}"
-
-@tool
-def remove_nulls_tool(file_path: str) -> str:
-    """Removes rows with null values"""
-    try:
-        df = pd.read_csv(file_path)
-        initial_rows = len(df)
-        df = df.dropna()
-        df.to_csv("cleaned_data/cleaned_data.csv", index=False)
-        return f"Removed {initial_rows - len(df)} rows with null values"
-    except Exception as e:
-        return f"Error removing nulls: {str(e)}"
-
-@tool
-def fix_dtypes_tool(file_path: str) -> str:
-    """Converts columns to appropriate data types"""
-    try:
-        df = pd.read_csv(file_path)
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                try:
-                    df[col] = pd.to_numeric(df[col], errors='raise')
-                except:
-                    continue
-        df.to_csv('cleaned_data/cleaned_data.csv', index=False)
-        return f"Fixed data types for numeric columns"
-    except Exception as e:
-        return f"Error fixing data types: {str(e)}"
+    return "data cleaned"
 
 class CleaningAgent:
     def __init__(self, agent: ChatOpenAI):
         self.agent = agent
         
-    def clean_data(self, formatted_instruction: str):
+    def clean_data(self, data : Dict, formatted_instruction: str):
         try:
-            # Extract the file path
-            file_path = formatted_instruction.split("Action Input:")[1].strip()
-            
             if not os.path.exists("cleaned_data"):
-                os.mkdir("cleaned_data")
+                os.makedirs("cleaned_data")
 
-
-            # Run all cleaning tools in sequence
             results = []
-            #results.append(clean_dates_tool(file_path))
-            results.append(clean_dates_tool.invoke(file_path))
+            cleaned_response = clean_dates_tool.invoke({'data' : data})
 
-            #print("Pre cleaning results:", results)
+            try:
+                print("Writing code")
+                #print(formatted_instruction)
+                formatted_instruction = "Please clean the data"
+                #write_code = self.write_function(formatted_instruction, data)
+                #print(write_code)
+            except:
+                print("Could not write code")
+                pass
 
-            # after first cleaning
-            file_path = r"cleaned_data/cleaned_data.csv"
-            #results.append(remove_nulls_tool(file_path))
-            results.append(remove_nulls_tool.invoke(file_path))
-            #results.append(fix_dtypes_tool(file_path))
-            results.append(fix_dtypes_tool.invoke(file_path))
+            results.append(cleaned_response)
 
-            #print("Post cleaning results:", results)
+            # save cleaned data' 
+            cleaned_data = pd.DataFrame(data)
+            cleaned_data.to_csv("cleaned_data/cleaned_data.csv", index=False)
 
             return "\n".join(results)
             
         except Exception as e:
             print(f"Error cleaning data: {e}")
             return None
+    
+    def write_function(self, instruction: str, data: Dict):
+            """
+            Uses the ChatOpenAI agent to dynamically generate Python code based on the instruction.
+            Args:
+                instruction (str): Natural language instruction to generate the function code.
+                data (Dict): Example data to provide context for the function.
+            Returns:
+                str: The generated Python code as a string.
+            """
+            try:
+                prompt = f"""
+                You are a coding assistant. Write a Python function based on the following instruction:
+
+                Instruction:
+                {instruction}
+
+                The function should take a dictionary as input and output the transformed dictionary. Use the example data provided below as context for column names and types:
+
+                Example data:
+                {data}
+
+                Ensure the code is well-commented and adheres to Python standards.
+                """
+                response = self.agent.invoke(prompt)
+                generated_code = response['text'] 
+
+                return generated_code
+            except Exception as e:
+                return f"Error in generating function code: {e}"

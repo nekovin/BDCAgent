@@ -28,18 +28,9 @@ class InterpretationAgent:
         self.confidence_threshold = confidence_threshold
         self.interpretation_history = []
     
-    def interpret_results(self, data : pd.DataFrame, prompt: str) -> str:
-        """
-        Get raw interpretation from the agent.
-        
-        Args:
-            prompt: The prompt to interpret
-            
-        Returns:
-            Raw interpretation response
-        """
+    def interpret_results(self, data : Dict, prompt: str) -> str:
         try:
-
+            '''
             # Prepare formatted input
             formatted_input = f"Data:\n{data.head().to_string(index=False)}\n\nPrompt:\n{prompt}"
             #if isinstance(formatted_input, dict):
@@ -47,7 +38,11 @@ class InterpretationAgent:
 
             context = "Interpret the data provided above. Please be descriptive. Format with ### above and below."
             response = self.agent.invoke([{"role": "system", "content": context}, {"role": "user", "content": formatted_input}])
-            return response.content
+            return response.content '''
+
+            print("Interpreting results...")
+
+            return self.agent.invoke("Say hello")
 
         except Exception as e:
             raise Exception(f"Error during interpretation: {e}")
