@@ -1,10 +1,11 @@
 import pandas as pd
-from openai import AsyncOpenAI
 from pydantic_ai.models.openai import OpenAIModel
 
 from cleaning_agent.cleaning_agent import CleaningAgent
 from causation_agent.causation_agent import CausationAgent
 from planning_agent.planning_agent import PlanningAgent
+
+from util.graph_utils import save_causal_graph
 
 def get_agents(model):
     
@@ -14,16 +15,25 @@ def get_agents(model):
 
     return cleaning_agent, causation_agent
 
+def convert_excel_to_csv(excel_path, csv_path):
+    df = pd.read_excel(excel_path)
+    df.to_csv(csv_path, index=False)
+    print(f"Excel file converted to CSV and saved at: {csv_path}")
+
 def get_data(file_path):
+
     df = pd.read_csv(file_path)
 
-    sample_data = df.head(3)#.to_dict('records')
+    sample_data = df.head(3)
 
     return sample_data
 
 def get_args():
-    model = OpenAIModel("gpt-4o")
-    file_path = r"C:\Users\CL-11\OneDrive\Repos\CausalAgent\data\AA.csv"
+    #model = OpenAIModel("gpt-4o")
+
+    model = OpenAIModel("gpt-4o-mini")
+    convert_excel_to_csv(r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\agric2A_72.xlsx", r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\agric2A_72.csv")
+    file_path = r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\agric2A_72.csv"
 
     return model, file_path
 
@@ -38,28 +48,32 @@ def main():
     # Planning
     planning_agent = PlanningAgent(model)
 
-    plan = planning_agent.plan_steps(df)
+    while True:
+            
+        cleaning_plan, causal_plan = planning_agent.plan_steps(df)
+        print("Cleaning Plan:\n", cleaning_plan)
+        print("Causal Plan:\n", causal_plan)
 
-    print("Plan:\n", plan)
+        user_input = input("Do you want to proceed with the plan? (yes/no): ")
+        if user_input.lower() == "yes":
+            break
 
-    # Cleaning
-    cleaned_df = cleaning_agent.clean_data(df, plan)
-
-    cols = [col for col in df.columns if "Variable" in col or "Time" in col]
-
-    print(cols)
-
-    final_df = cleaned_df[cols]
-
-    cleaned_df.to_csv(r"C:\Users\CL-11\OneDrive\Repos\CausalAgent\data\cleaned_data.csv", index=False)
-    final_df.to_csv(r"C:\Users\CL-11\OneDrive\Repos\CausalAgent\data\formatted_data.csv", index=False)
+    cleaned_df = cleaning_agent.clean_data(df, cleaning_plan)
+    cleaned_df.to_csv(r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\cleaned_data.csv", index=False)
     print("Cleaned DataFrame:\n", cleaned_df)
 
-    # Causation
-    #causal_df = causation_agent.analyse_causation(cleaned_df)
-    #causal_df.to_csv(r"C:\Users\CL-11\OneDrive\Repos\CausalAgent\data\causal_df.csv", index=False)
-    #print("Causal DataFrame:\n", causal_df)
+    causal_df, causal_graph = causation_agent.analyse_causation(cleaned_df, causal_plan)
+    causal_df.to_csv(r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\causal_df.csv", index=False)
+    print("Causal DataFrame:\n", causal_df)
 
+    base_path = r"C:\Users\CL-11\OneDrive\Repos\BDCAgent\data\causal_graph"
+    save_causal_graph(causal_graph, base_path)
+
+    #visualize_causal_graph(cleaned_df, causation_agent)
+
+    # add functionality to chat
+    # maintain memory of previous chat
+    # dyanmically update the plan based on the chat and recursively update if prompted
 
 if __name__ == '__main__':
     main()

@@ -1,10 +1,11 @@
 import nest_asyncio
 from pydantic_ai import Agent
-
 import pandas as pd
+import numpy as np
 from httpx import AsyncClient
-import re
 from dataclasses import dataclass
+from typing import Dict, List, Any, Tuple
+import networkx as nx
 
 nest_asyncio.apply()
 
@@ -13,59 +14,90 @@ class Deps:
     client: AsyncClient
     brave_api_key: str | None
 
-
 class CausationAgent:
     def __init__(self, model):
         self.causation_agent = Agent(
             model,
-            system_prompt=f'You are an expert in causal inference and causality analysis. '
-                          f'Your task is to identify causal relationships, perform causal reasoning, and analyse data.',
+            system_prompt="""You are an expert in causal inference and causality analysis. 
+            Your task is to identify causal relationships and analyze data.""",
             deps_type=Deps,
             retries=2
         )
 
-    def get_causation_agent(self):
-        return self.causation_agent
-
-    async def identify_causes():
-        pass
-
-    def analyse_causation(self, data):
-
-        # Perform causation analysis
+    def analyze_causation(self, data: pd.DataFrame, planning_data: str) -> Tuple[pd.DataFrame, nx.DiGraph]:
+        """Analyze causal relationships in the data and return summary DataFrame and causal graph.
+        
+        Args:
+            data: Input DataFrame containing the variables
+            planning_data: String containing planning information
+            
+        Returns:
+            Tuple containing:
+            - DataFrame summarizing causal relationships
+            - NetworkX DiGraph representing the causal network
+        """
+        # introduce planning data here
         response = self.causation_agent.run_sync(
-            f"Perform causal analysis on the following data and identify causal relationships: {data}"
+            f"""Analyze this planning data and return a Python list of the key variables involved in causal relationships.
+
+            
+            
+            Return ONLY a Python list of variable names, nothing else."""
         )
+
+        print(data)
+        
         print(response.data)
 
-        # Ask the causation agent to generate a Python function
-        response = self.causation_agent.run_sync(
-            f"Based on the following data, create a Python function called `analyse_causation` "
-            f"that takes a pandas DataFrame as input and identifies causal relationships in the data. "
-            f"Return only the function ready to copy and paste directly without any extra text. "
-            f"Data: {data}"
-        )
+        #print(f"Variables: {variables}")
 
-        print(response.data)
+        return response.data, response.data
 
-        function_match = re.search(
-            r'def\s+analyse_causation\s*\([^)]*\)\s*->\s*pd\.DataFrame\s*:\s*(.*?)\n\s*return\s+\w+',
-            response.data,
-            re.DOTALL | re.MULTILINE
-        )
+        # Initialize results storage
+        summary_data = []
+        G = nx.DiGraph()
 
-        if function_match:
-            print("Function found:")
-            print(function_match.group(0))
-        else:
-            print("No function found")
+        # Analyze relationships between variables
+        for i, var1 in enumerate(variables):
+            for var2 in variables[i+1:]:
+                try:
 
-        namespace = {"pd": pd}
-        exec(function_match.group(0), namespace)
+                    correlation = data[var1].corr(data[var2])
 
-        # Access the analyse_causation function dynamically
-        dynamic_analyse_causation = namespace['analyse_causation']
-        causal_df = dynamic_analyse_causation(data)
+                    print(correlation)
 
-        print("Causal Analysis Results:\n", causal_df)
-        return causal_df
+                    temporal_corr = data[var1].corr(data[var2].shift(-1))
+                    reverse_temporal_corr = data[var2].corr(data[var1].shift(-1))
+                    
+                    # Determine causality direction and strength
+                    if abs(temporal_corr) > abs(reverse_temporal_corr):
+                        cause, effect = var1, var2
+                        strength = abs(temporal_corr)
+                    else:
+                        cause, effect = var2, var1
+                        strength = abs(reverse_temporal_corr)
+
+                    # Only include relationships with meaningful strength
+                    if strength > 0.3:  # Threshold for significance
+                        summary_data.append({
+                            'Cause': cause,
+                            'Effect': effect,
+                            'Correlation': correlation,
+                            'Causal_Strength': strength
+                        })
+                        
+                        # Add edge to graph
+                        G.add_edge(cause, effect, weight=strength)
+                        
+                except Exception as e:
+                    print(f"Error analyzing {var1} -> {var2}: {str(e)}")
+                    continue
+
+        # Create summary DataFrame
+        summary_df = pd.DataFrame(summary_data)
+        
+        # Sort by causal strength
+        if not summary_df.empty:
+            summary_df = summary_df.sort_values('Causal_Strength', ascending=False)
+
+        return summary_df, G
