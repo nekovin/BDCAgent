@@ -31,7 +31,6 @@ class DataCleaningOperations:
     def handle_temporal_gaps(df: pd.DataFrame, time_column: str) -> pd.DataFrame:
         """Handle temporal gaps while preserving data"""
         try:
-            # Convert to datetime if not already
             df[time_column] = pd.to_datetime(df[time_column])
             
             df = df.sort_values(time_column)
@@ -128,7 +127,6 @@ class CleaningAgent:
             
         except Exception as e:
             self.logger.error(f"Failed to parse cleaning operations: {str(e)}")
-            # Return a safe default dictionary of operations
             return {
                 "handle_missing_values": [{"method": "ffill"}],
                 "handle_temporal_gaps": [{"time_column": next((col for col in data.columns if 'time' in col.lower()), data.columns[0])}]
@@ -139,15 +137,12 @@ class CleaningAgent:
         self.logger.debug("Starting data cleaning process")
         
         try:
-            # Get cleaning operations from LLM
             cleaning_operations = self.analyze_cleaning_needs(data, bdc_plan)
             self.logger.debug(f"Determined cleaning operations: {cleaning_operations}")
             
-            # Make a copy of the original data
             cleaned_data = data.copy()
             
-            # Apply operations in order
-            for operation_name, operations_list in cleaning_operations.items():
+            for operation_name, operations_list in cleaning_operations.items(): 
                 for operation in operations_list:
                     if hasattr(self.operations, operation_name):
                         cleaning_method = getattr(self.operations, operation_name)
@@ -156,7 +151,6 @@ class CleaningAgent:
                     else:
                         self.logger.warning(f"Unknown operation: {operation_name}")
 
-            # Validate results
             self._validate_cleaning_results(cleaned_data, data, bdc_plan)
             
             return cleaned_data
@@ -167,13 +161,12 @@ class CleaningAgent:
 
     def _validate_cleaning_results(self, cleaned_data: pd.DataFrame, original_data: pd.DataFrame, bdc_plan: str):
         """Validate the cleaning results with detailed logging"""
-        # Calculate validation metrics
+
         row_count_ratio = len(cleaned_data) / len(original_data)
         missing_columns = [col for col in original_data.columns if col not in cleaned_data.columns]
         original_nulls = original_data.isnull().sum().sum()
         cleaned_nulls = cleaned_data.isnull().sum().sum()
         
-        # Log detailed metrics
         self.logger.debug(f"Validation metrics:")
         self.logger.debug(f"- Row count ratio: {row_count_ratio:.2f}")
         self.logger.debug(f"- Missing columns: {missing_columns}")
@@ -181,9 +174,9 @@ class CleaningAgent:
         self.logger.debug(f"- Cleaned null count: {cleaned_nulls}")
         
         validations = {
-            "row_count_preserved": len(cleaned_data) > 0,  # Ensure we have data
+            "row_count_preserved": len(cleaned_data) > 0,
             "columns_preserved": len(missing_columns) == 0,
-            "data_quality": True  # Basic check that we have data to work with
+            "data_quality": True 
         }
 
         failed_validations = [k for k, v in validations.items() if not v]
