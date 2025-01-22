@@ -77,7 +77,8 @@
             ws.onmessage = (event) => {
                 console.log('Message received:', event.data);
                 const div = document.createElement('div');
-                div.textContent = event.data;
+                //div.textContent = event.data;
+                div.innerHTML = formatResponse(event.data);
                 messagesDiv.appendChild(div);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             };
@@ -85,6 +86,18 @@
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
+        }
+
+        function formatResponse(responseText) {
+            // Replace headings (###) with bold text
+            responseText = responseText.replace(/### (.+?)/g, '<strong>$1</strong>');
+            // Replace bullet points (-) with list items
+            responseText = responseText.replace(/- (.+?)/g, '<li>$1</li>');
+            // Wrap consecutive list items with <ul> tags
+            responseText = responseText.replace(/(?:<li>.+?<\/li>\n?)+/g, '<ul>$&</ul>');
+            // Add line breaks for remaining newlines
+            responseText = responseText.replace(/\n/g, '<br>');
+            return responseText;
         }
 
         async function handleFileUpload() {
@@ -99,7 +112,7 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('/upload', {
+                const response = await fetch('http://localhost:8000/upload', { // needed to include full full URL
                     method: 'POST',
                     body: formData
                 });

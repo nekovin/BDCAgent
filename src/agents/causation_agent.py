@@ -38,21 +38,11 @@ class CausationAgent:
         """
         # introduce planning data here
         response = self.causation_agent.run_sync(
-            f"""Analyze this planning data and return a Python list of the key variables involved in causal relationships.
-
-            
-            
-            Return ONLY a Python list of variable names, nothing else."""
+            f"""Do some super basic causal analysis on the data please. Heres the plan from the planning agent: {planning_data} Data{data}"""
         )
 
-        print(data)
-        
-        print(response.data)
-
-        #print(f"Variables: {variables}")
-
-        return response.data, response.data
-
+        return response.data
+    
         # Initialize results storage
         summary_data = []
         G = nx.DiGraph()

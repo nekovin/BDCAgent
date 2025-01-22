@@ -1,0 +1,16 @@
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    max-width: 70%;
+}
+
+.agent-message {
+    background-color: #d6eaff;
+    text-align: left;
+}
+
+.user-message {
+    background-color: #d1ffd6;
+    text-align: right;
+}

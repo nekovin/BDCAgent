@@ -135,7 +135,9 @@ class CleaningAgent:
     def clean_data(self, data: pd.DataFrame, bdc_plan: str) -> pd.DataFrame:
         """Apply cleaning operations based on analysis"""
         self.logger.debug("Starting data cleaning process")
+        return data
         
+        '''
         try:
             cleaning_operations = self.analyze_cleaning_needs(data, bdc_plan)
             self.logger.debug(f"Determined cleaning operations: {cleaning_operations}")
@@ -157,7 +159,7 @@ class CleaningAgent:
 
         except Exception as e:
             self.logger.error(f"Error during cleaning process: {str(e)}")
-            raise
+            raise'''
 
     def _validate_cleaning_results(self, cleaned_data: pd.DataFrame, original_data: pd.DataFrame, bdc_plan: str):
         """Validate the cleaning results with detailed logging"""
