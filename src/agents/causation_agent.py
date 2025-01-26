@@ -19,7 +19,9 @@ class CausationAgent:
         self.causation_agent = Agent(
             model,
             system_prompt="""You are an expert in causal inference and causality analysis. 
-            Your task is to identify causal relationships and analyze data.""",
+            Your task is to identify causal relationships and analyze data.
+            The data has already been preprocessed and cleaned and the data is ready for causal analysis.
+            The data has been processed by a cleaning agent and is ready for causal analysis.""",
             deps_type=Deps,
             retries=2
         )
@@ -38,7 +40,9 @@ class CausationAgent:
         """
         # introduce planning data here
         response = self.causation_agent.run_sync(
-            f"""Do some super basic causal analysis on the data please. Heres the plan from the planning agent: {planning_data} Data{data}"""
+            f"""
+            The data has already been preprocessed and cleaned and the data is ready for causal analysis.
+            Do some super basic causal analysis on the data please. Heres the plan from the planning agent: {planning_data} Data{data}"""
         )
 
         return response.data

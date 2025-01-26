@@ -132,34 +132,10 @@ class CleaningAgent:
                 "handle_temporal_gaps": [{"time_column": next((col for col in data.columns if 'time' in col.lower()), data.columns[0])}]
             }
 
-    def clean_data(self, data: pd.DataFrame, bdc_plan: str) -> pd.DataFrame:
+    def clean_data(self, data: pd.DataFrame, plan: str) -> pd.DataFrame:
         """Apply cleaning operations based on analysis"""
         self.logger.debug("Starting data cleaning process")
         return data
-        
-        '''
-        try:
-            cleaning_operations = self.analyze_cleaning_needs(data, bdc_plan)
-            self.logger.debug(f"Determined cleaning operations: {cleaning_operations}")
-            
-            cleaned_data = data.copy()
-            
-            for operation_name, operations_list in cleaning_operations.items(): 
-                for operation in operations_list:
-                    if hasattr(self.operations, operation_name):
-                        cleaning_method = getattr(self.operations, operation_name)
-                        cleaned_data = cleaning_method(cleaned_data, **operation)
-                        self.logger.debug(f"Applied {operation_name} with params {operation}")
-                    else:
-                        self.logger.warning(f"Unknown operation: {operation_name}")
-
-            self._validate_cleaning_results(cleaned_data, data, bdc_plan)
-            
-            return cleaned_data
-
-        except Exception as e:
-            self.logger.error(f"Error during cleaning process: {str(e)}")
-            raise'''
 
     def _validate_cleaning_results(self, cleaned_data: pd.DataFrame, original_data: pd.DataFrame, bdc_plan: str):
         """Validate the cleaning results with detailed logging"""

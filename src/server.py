@@ -82,20 +82,25 @@ async def websocket_endpoint(websocket: WebSocket):
 
             try:
                 if uploaded_data is not None:
-                    await websocket.send_text(f"Planning...")
+                    
                     response, plans = planning_agent.infer_response(user_input, uploaded_data)
-                    session["current_plan"] = plans
-                    await websocket.send_text(f"Cleaning...")
-                    print("Plans:")
-                    print(type(plans['cleaning_plan']))
-                    print(type(uploaded_data))
-                    #await websocket.send_text(f"Type of cleaning: {type(plans['cleaning_plan'])} and type of data: {type(uploaded_data)}")
-                    cleaned_data = clean_data(cleaning_agent, plans['cleaning_plan'], uploaded_data)
-                    await websocket.send_text(cleaned_data)
-                    await websocket.send_text(f"Analysing...")
-                    causal_analysis = analyze_causation(causal_agent, cleaned_data, plans['causal_plan'])
-                    await websocket.send_text(causal_analysis)
+                    
+                    #await websocket.send_text(f"Debugging: {response}, \n{plans}")
+                    if plans is not None:
+                        await websocket.send_text(f"Planning...")
+                        await websocket.send_text(f"Plans were made...")
+                        session["current_plan"] = plans
+                        await websocket.send_text(f"Cleaning...")
+                        #await websocket.send_text(f"Type of cleaning: {type(plans['cleaning_plan'])} and type of data: {type(uploaded_data)}")
+                        cleaned_data = clean_data(cleaning_agent, plans['cleaning_plan'], uploaded_data)
+                        #await websocket.send_text(cleaned_data)
+                        await websocket.send_text(f"Analysing...")
+                        causal_analysis = analyze_causation(causal_agent, cleaned_data, plans['causal_plan'])
+                        await websocket.send_text(causal_analysis)
+                    else:
+                        await websocket.send_text(f"Planning Agent: {response}")
                 else:
+                    #await websocket.send_text(f"Data is none.")
                     response, plans = planning_agent.infer_response(user_input, None)
                     await websocket.send_text(f"Planning Agent: {response}")
 
@@ -104,7 +109,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 response, plans = f"An error occurred: {str(e)}", None
                 session["history"].append({"role": "agent", "content": response})
             
-            #await websocket.send_text(f"Planning Agent: {response}")
+            #await websocket.send_text(f"Debugging: {response}")
 
     except WebSocketDisconnect:
         print(f"Client disconnected: {session_id}")

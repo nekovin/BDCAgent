@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test Client</title>
+    <style>
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            max-width: 70%;
+        }
+
+        .agent-message {
+            background-color: #d6eaff;
+            text-align: left;
+        }
+
+        .user-message {
+            background-color: #d1ffd6;
+            text-align: right;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 20px 0;
+            padding: 10px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .connected {
+            background-color: #e8f5e9;
+        }
+        .disconnected {
+            background-color: #ffebee;
+        }
+        .file-upload {
+            margin: 20px 0;
+        }
+        .upload-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+        }
+        .error {
+            background-color: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test Client</h1>
+    <div id="status" class="status disconnected">Disconnected</div>
+    
+    <div class="file-upload">
+        <input type="file" id="csvFile" accept=".csv">
+        <button onclick="handleFileUpload()">Upload CSV</button>
+        <div id="uploadStatus"></div>
+    </div>
+    
+    <div id="messages">
+        <div class="message agent-message">Agent message goes here</div>
+        <div class="message user-message">User message goes here</div>
+    </div>
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        let ws;
+        const messagesDiv = document.getElementById('messages');
+        const statusDiv = document.getElementById('status');
+        const messageInput = document.getElementById('messageInput');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8000/ws/chat');
+            
+            ws.onopen = () => {
+                console.log('Connected');
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+            };
+            
+            ws.onclose = () => {
+                console.log('Disconnected');
+                statusDiv.textContent = 'Disconnected - Reconnecting...';
+                statusDiv.className = 'status disconnected';
+                setTimeout(connect, 1000);
+            };
+            
+            ws.onmessage = (event) => {
+                console.log('Message received:', event.data);
+                const div = document.createElement('div');
+                //div.textContent = event.data;
+                div.innerHTML = formatResponse(event.data);
+                messagesDiv.appendChild(div);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function formatResponse(responseText) {
+            // Replace markdown bullet points with proper HTML list items
+            responseText = responseText.replace(/^- (.+)$/gm, '<li>$1</li>');
+            
+            // Wrap consecutive list items with <ul> tags
+            responseText = responseText.replace(/(?:<li>.+?<\/li>\n?)+/g, match => {
+                return `<ul>${match}</ul>`;
+            });
+            
+            // Replace headings (###) with bold text
+            responseText = responseText.replace(/### (.+?)(?=\n|$)/g, '<strong>$1</strong>');
+            
+            // Add line breaks for remaining newlines
+            responseText = responseText.replace(/\n/g, '<br>');
+            
+            // Add message styling
+            responseText = `<div class="message agent-message">${responseText}</div>`;
+            
+            return responseText;
+        }
+
+        async function handleFileUpload() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file first!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://localhost:8000/upload', { // needed to include full full URL
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                uploadStatus.textContent = result.message;
+                uploadStatus.className = `upload-status ${result.status}`;
+                
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                uploadStatus.textContent = 'Error uploading file: ' + error.message;
+                uploadStatus.className = 'upload-status error';
+            }
+        }
+
+        function sendMessage() {
+            if (!messageInput.value.trim()) return;
+            
+            console.log('Sending message:', messageInput.value);
+            ws.send(messageInput.value);
+            
+            const div = document.createElement('div');
+            div.textContent = 'You: ' + messageInput.value;
+            div.classList.add('message', 'user-message');
+            messagesDiv.appendChild(div);
+            
+            messageInput.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Initial connection
+        connect();
+    </script>
+</body>
+</html>
